@@ -1,0 +1,525 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TheIsleVN - YTB BanhMi</title>
+    <script type="module" crossorigin src="./assets/index-CealnApy.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-hNLmMOku.css">
+    <style>
+      /* Standalone Cyberpunk Update Modal & Toast Styles */
+      #updateModalOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(4, 8, 6, 0.82);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        pointer-events: auto;
+      }
+      #updateModalContainer {
+        width: min(540px, calc(100vw - 40px));
+        background: linear-gradient(180deg, #111a14 0%, #080d0a 100%);
+        border: 1px solid rgba(124, 242, 166, 0.4);
+        border-radius: 14px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85), 0 0 25px rgba(124, 242, 166, 0.15);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        color: #dcf1e2;
+        font-family: "Inter", system-ui, sans-serif;
+        position: relative;
+        animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: auto;
+      }
+      @keyframes modalIn {
+        from { opacity: 0; transform: scale(0.94) translateY(-10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+      }
+      .updateHeader {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid rgba(124, 242, 166, 0.15);
+        padding-bottom: 14px;
+      }
+      .updateIcon {
+        font-size: 26px;
+        line-height: 1;
+        filter: drop-shadow(0 0 8px rgba(124, 242, 166, 0.6));
+      }
+      .updateTitleGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .updateMainTitle {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #7cf2a6;
+        text-shadow: 0 0 10px rgba(124, 242, 166, 0.4);
+      }
+      .updateVersionTag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: #ffcf4a;
+        font-family: "JetBrains Mono", monospace;
+        font-weight: 600;
+      }
+      .updateNotesBox {
+        background: rgba(0, 0, 0, 0.45);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 14px 16px;
+        max-height: 200px;
+        overflow-y: auto;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #c8e6d2;
+      }
+      .updateNotesBox h1, .updateNotesBox h2, .updateNotesBox h3, .updateNotesBox h4 {
+        color: #7cf2a6;
+        margin: 6px 0 4px 0;
+        font-size: 13.5px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .updateNotesBox ul, .updateNotesBox ol {
+        margin: 4px 0 8px 18px;
+        padding: 0;
+      }
+      .updateNotesBox li {
+        margin-bottom: 4px;
+      }
+      .updateNotesBox strong, .updateNotesBox b {
+        color: #ffffff;
+        font-weight: 600;
+      }
+      .updateNotesBox code {
+        background: rgba(124, 242, 166, 0.15);
+        color: #7cf2a6;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-family: monospace;
+        font-size: 12px;
+      }
+      .updateNotesBox hr {
+        border: none;
+        border-top: 1px solid rgba(124, 242, 166, 0.2);
+        margin: 8px 0;
+      }
+      .updateNotesBox p {
+        margin: 4px 0;
+      }
+      .updateNotesBox::-webkit-scrollbar {
+        width: 6px;
+      }
+      .updateNotesBox::-webkit-scrollbar-thumb {
+        background: rgba(124, 242, 166, 0.3);
+        border-radius: 4px;
+      }
+      .updateProgressWrap {
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .updateProgressStatus {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        font-family: "JetBrains Mono", monospace;
+        color: #7cf2a6;
+      }
+      .updateProgressBar {
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 999px;
+        overflow: hidden;
+        border: 1px solid rgba(124, 242, 166, 0.2);
+      }
+      .updateProgressFill {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #7cf2a6);
+        box-shadow: 0 0 12px rgba(124, 242, 166, 0.7);
+        border-radius: 999px;
+        transition: width 0.2s ease;
+      }
+      .updateActions {
+        display: flex;
+        gap: 12px;
+        margin-top: 4px;
+      }
+      .btnUpdateNow {
+        flex: 1.2;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: 1px solid #7cf2a6;
+        border-radius: 8px;
+        color: #03140a;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12.5px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        cursor: pointer;
+        box-shadow: 0 0 18px rgba(124, 242, 166, 0.4);
+        transition: all 0.18s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .btnUpdateNow:hover:not(:disabled) {
+        box-shadow: 0 0 25px rgba(124, 242, 166, 0.7);
+        transform: translateY(-1px);
+        background: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+      }
+      .btnUpdateNow:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
+      .btnUpdateLater {
+        flex: 0.9;
+        padding: 12px 14px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 92, 124, 0.4);
+        border-radius: 8px;
+        color: #ff7b92;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.18s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .btnUpdateLater:hover:not(:disabled) {
+        background: rgba(255, 92, 124, 0.15);
+        color: #ffffff;
+        border-color: #ff5a5a;
+        box-shadow: 0 0 14px rgba(255, 92, 124, 0.3);
+      }
+      .btnUpdateLater:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* Standalone Toast Notification */
+      #updateToastContainer {
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%) translateY(120px);
+        background: linear-gradient(180deg, #18221c 0%, #0d1410 100%);
+        border: 1px solid #ffcf4a;
+        border-left: 5px solid #ffcf4a;
+        border-radius: 10px;
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(255, 207, 74, 0.2);
+        padding: 14px 18px;
+        color: #f5f5f5;
+        font-family: "Inter", system-ui, sans-serif;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        z-index: 999999;
+        max-width: min(500px, calc(100vw - 32px));
+        opacity: 0;
+        transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: auto;
+      }
+      #updateToastContainer.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+      }
+      .toastIcon {
+        font-size: 20px;
+        flex-shrink: 0;
+        line-height: 1.2;
+      }
+      .toastBody {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+      }
+      .toastTitle {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 13px;
+        font-weight: 700;
+        color: #ffcf4a;
+        letter-spacing: 0.03em;
+      }
+      .toastDesc {
+        font-size: 12px;
+        line-height: 1.45;
+        color: #d2e4d8;
+      }
+      .toastClose {
+        background: transparent;
+        border: none;
+        color: #82997f;
+        cursor: pointer;
+        font-size: 16px;
+        line-height: 1;
+        padding: 2px 4px;
+        border-radius: 4px;
+        transition: color 0.15s ease;
+      }
+      .toastClose:hover {
+        color: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Standalone Cyberpunk Update Modal -->
+    <div id="updateModalOverlay" class="interactive-region">
+      <div id="updateModalContainer" class="interactive-region">
+        <div class="updateHeader">
+          <div class="updateIcon">🚀</div>
+          <div class="updateTitleGroup">
+            <div class="updateMainTitle">BẢN CẬP NHẬT MỚI</div>
+            <div class="updateVersionTag">
+              <span>Phiên bản:</span>
+              <span id="updateVersionNumber" style="color:#7cf2a6; font-weight:700;">v1.0.3</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 12px; font-weight: 600; text-transform: uppercase; color: #7cf2a6; letter-spacing: 0.05em;">
+          📋 Nội dung bản cập nhật:
+        </div>
+
+        <div id="updateReleaseNotes" class="updateNotesBox">
+          Đang tải thông tin...
+        </div>
+
+        <div id="updateProgressWrap" class="updateProgressWrap">
+          <div class="updateProgressStatus">
+            <span id="updateProgressText">Đang tải bản cập nhật...</span>
+            <span id="updateProgressPercent">0%</span>
+          </div>
+          <div class="updateProgressBar">
+            <div id="updateProgressFill" class="updateProgressFill"></div>
+          </div>
+        </div>
+
+        <div class="updateActions">
+          <button id="btnUpdateNow" class="btnUpdateNow">
+            <span>⚡ CẬP NHẬT NGAY</span>
+          </button>
+          <button id="btnUpdateLater" class="btnUpdateLater">
+            <span>✖ ĐỂ SAU (KHÔNG)</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Standalone Toast Notification -->
+    <div id="updateToastContainer" class="interactive-region">
+      <div class="toastIcon" id="toastIcon">⚠️</div>
+      <div class="toastBody">
+        <div class="toastTitle" id="toastTitle">ĐÃ BỎ QUA CẬP NHẬT</div>
+        <div class="toastDesc" id="toastDesc">
+          Nếu muốn cập nhật phiên bản mới, vui lòng cài lại app hoặc tải bộ cài mới nhất tại kênh YouTube Bánh Mì Biết Chơi!
+        </div>
+      </div>
+      <button class="toastClose" id="toastCloseBtn" title="Đóng">✕</button>
+    </div>
+
+    <!-- Update Manager Script -->
+    <script>
+      (function() {
+        if (window.location.hash === "#radar") return;
+
+        let activeVersion = null;
+        let toastTimer = null;
+
+        const overlay = document.getElementById("updateModalOverlay");
+        const versionEl = document.getElementById("updateVersionNumber");
+        const notesEl = document.getElementById("updateReleaseNotes");
+        const progressWrap = document.getElementById("updateProgressWrap");
+        const progressText = document.getElementById("updateProgressText");
+        const progressPercent = document.getElementById("updateProgressPercent");
+        const progressFill = document.getElementById("updateProgressFill");
+        const btnNow = document.getElementById("btnUpdateNow");
+        const btnLater = document.getElementById("btnUpdateLater");
+
+        const toast = document.getElementById("updateToastContainer");
+        const toastIcon = document.getElementById("toastIcon");
+        const toastTitle = document.getElementById("toastTitle");
+        const toastDesc = document.getElementById("toastDesc");
+        const toastClose = document.getElementById("toastCloseBtn");
+
+        function showToast(icon, title, desc, durationMs, type) {
+          toastIcon.textContent = icon || "⚠️";
+          toastTitle.textContent = title || "THÔNG BÁO";
+          toastDesc.textContent = desc || "";
+
+          let color = "#ffcf4a";
+          if (type === "success" || icon === "✅") color = "#7cf2a6";
+          else if (type === "error" || icon === "❌") color = "#ff5a5a";
+          else if (type === "info" || icon === "ℹ️") color = "#38bdf8";
+
+          toast.style.borderLeftColor = color;
+          toastTitle.style.color = color;
+          toast.style.boxShadow = `0 16px 40px rgba(0, 0, 0, 0.8), 0 0 20px ${color}33`;
+
+          toast.classList.add("show");
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => {
+            toast.classList.remove("show");
+          }, durationMs || 7000);
+        }
+
+        toastClose.addEventListener("click", () => {
+          if (toastTimer) clearTimeout(toastTimer);
+          toast.classList.remove("show");
+        });
+
+        function formatReleaseNotes(raw) {
+          if (!raw) return "• Cập nhật tối ưu hóa hiệu năng, giảm giật lag.<br>• Hỗ trợ phím tắt Reload, Reset Layout & Chế độ Streamer.<br>• Tích hợp hệ thống tự động kiểm tra và cập nhật ứng dụng.";
+          let content = "";
+          if (Array.isArray(raw)) {
+            content = raw.map(item => (typeof item === "string" ? item : (item?.note || ""))).filter(Boolean).join("\n<hr>\n");
+          } else if (typeof raw === "string") {
+            content = raw.trim();
+          } else {
+            content = String(raw);
+          }
+
+          const hasHtmlTags = /<\/?(h[1-6]|p|ul|ol|li|strong|b|em|code|hr|br|div|span|blockquote)[\s>/]/i.test(content);
+
+          if (hasHtmlTags) {
+            return content
+              .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+              .replace(/\bon\w+\s*=\s*(['"]).*?\1/gi, "")
+              .replace(/\bon\w+\s*=\s*[^ >]+/gi, "");
+          }
+
+          let formatted = content
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+          formatted = formatted.replace(/^#+\s*(.*)$/gm, "<div style='color:#7cf2a6; font-weight:bold; margin-top:8px; margin-bottom:4px;'>$1</div>");
+          formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+          formatted = formatted.replace(/^\s*[-*]\s*(.*)$/gm, "<div style='margin-left:8px;'>• $1</div>");
+          formatted = formatted.replace(/\n/g, "<br>");
+          return formatted;
+        }
+
+        function showModal(data) {
+          if (!data || !data.version) return;
+          activeVersion = data.version;
+          versionEl.textContent = "v" + data.version;
+          notesEl.innerHTML = formatReleaseNotes(data.releaseNotes);
+          progressWrap.style.display = "none";
+          btnNow.disabled = false;
+          btnLater.disabled = false;
+          btnNow.innerHTML = "<span>⚡ CẬP NHẬT NGAY</span>";
+          overlay.style.display = "flex";
+        }
+
+        function closeModal() {
+          overlay.style.display = "none";
+          window.dispatchEvent(new CustomEvent("updateModalClosed"));
+        }
+
+        btnNow.addEventListener("click", () => {
+          btnNow.disabled = true;
+          btnLater.disabled = true;
+          btnNow.innerHTML = "<span>⏳ ĐANG TẢI...</span>";
+          progressWrap.style.display = "flex";
+          progressText.textContent = "Đang kết nối tới GitHub Releases...";
+          progressPercent.textContent = "0%";
+          progressFill.style.width = "0%";
+
+          if (window.isleOverlay && window.isleOverlay.startUpdateDownload) {
+            window.isleOverlay.startUpdateDownload();
+          }
+        });
+
+        btnLater.addEventListener("click", () => {
+          if (window.isleOverlay && window.isleOverlay.dismissUpdate && activeVersion) {
+            window.isleOverlay.dismissUpdate(activeVersion);
+          }
+          closeModal();
+          showToast(
+            "⚠️",
+            "ĐÃ BỎ QUA CẬP NHẬT",
+            "Nếu muốn cập nhật phiên bản mới sau này, vui lòng cài lại app hoặc tải bộ cài mới nhất tại kênh YouTube Bánh Mì Biết Chơi!",
+            9000,
+            "warning"
+          );
+        });
+
+        if (window.isleOverlay) {
+          if (window.isleOverlay.onUpdatePrompt) {
+            window.isleOverlay.onUpdatePrompt((data) => {
+              showModal(data);
+            });
+          }
+
+          if (window.isleOverlay.onUpdateProgress) {
+            window.isleOverlay.onUpdateProgress((prog) => {
+              const p = prog.percent || 0;
+              const mbTransferred = ((prog.transferred || 0) / (1024 * 1024)).toFixed(1);
+              const mbTotal = ((prog.total || 0) / (1024 * 1024)).toFixed(1);
+              const speed = ((prog.bytesPerSecond || 0) / (1024 * 1024)).toFixed(1);
+              progressText.textContent = "Đang tải: " + mbTransferred + " MB / " + mbTotal + " MB (" + speed + " MB/s)";
+              progressPercent.textContent = p + "%";
+              progressFill.style.width = p + "%";
+            });
+          }
+
+          if (window.isleOverlay.onUpdateDownloaded) {
+            window.isleOverlay.onUpdateDownloaded((info) => {
+              progressText.textContent = "Tải thành công! Đang cài đặt và khởi động lại...";
+              progressPercent.textContent = "100%";
+              progressFill.style.width = "100%";
+              btnNow.innerHTML = "<span>✅ ĐANG KHỞI ĐỘNG LẠI...</span>";
+            });
+          }
+
+          if (window.isleOverlay.onUpdateError) {
+            window.isleOverlay.onUpdateError((err) => {
+              progressWrap.style.display = "none";
+              btnNow.disabled = false;
+              btnLater.disabled = false;
+              btnNow.innerHTML = "<span>⚡ THỬ LẠI</span>";
+              showToast("❌", "LỖI TẢI BẢN CẬP NHẬT", err.message || "Không thể tải bản cập nhật từ GitHub. Vui lòng kiểm tra mạng hoặc thử lại sau!", 7000, "error");
+            });
+          }
+
+          if (window.isleOverlay.onUpdateStatus) {
+            window.isleOverlay.onUpdateStatus((res) => {
+              if (res.status === "latest") {
+                showToast("✅", "PHIÊN BẢN MỚI NHẤT", res.message || "Bạn đang sử dụng phiên bản TheIsleVN mới nhất, không cần cập nhật!", 5000, "success");
+              } else if (res.status === "error") {
+                showToast("❌", "LỖI KIỂM TRA CẬP NHẬT", res.message || "Không thể kết nối máy chủ GitHub.", 6000, "error");
+              } else if (res.status === "not-packaged") {
+                showToast("ℹ️", "CHẾ ĐỘ DEV", res.message, 4000, "info");
+              }
+            });
+          }
+        }
+      })();
+    </script>
+  </body>
+</html>

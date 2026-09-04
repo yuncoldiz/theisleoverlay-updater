@@ -1,0 +1,28 @@
+# Large binaries and installer files (upload these to GitHub Releases assets instead)
+*.exe
+*.dll
+*.pak
+*.bin
+*.dat
+resources/*.asar*
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Logs
+*.log
+log.txt
+requests.txt
+
+# Backup files and folders
+*.bak
+*.original_backup
+backup_*/
+**/backup_*/
+resources/app_original/
+resources/resources/
+
+# Scratch portable tools
+scratch/node-portable/
+scratch/*.zip

@@ -1,0 +1,20 @@
+{
+  "name": "theisleinformation-bybanhmibietchoi",
+  "private": true,
+    "version": "1.0.4",
+  "description": "TheIsleInformation-byBanhmibietchoi in-game overlay",
+  "author": "YannikAufDie1",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "electron-updater": "^6.6.2",
+    "koffi": "^3.1.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "three": "^0.184.0",
+    "uiohook-napi": "^1.5.5",
+    "ws": "^8.21.0"
+  }
+}

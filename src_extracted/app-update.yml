@@ -1,0 +1,5 @@
+# Auto-update configuration using GitHub Releases
+provider: github
+owner: yuncoldiz
+repo: theisleoverlay-updater
+updaterCacheDirName: isle-overlay-updater
