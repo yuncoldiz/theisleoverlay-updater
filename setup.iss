@@ -1,5 +1,5 @@
 #define AppName "TheIsleVn-BanhMi"
-#define AppVersion "1.0.4"
+#define AppVersion "1.0.5"
 #define AppPublisher "BanhMiBietChoi"
 #define AppExeName "TheIsleVn-BanhMi.exe"
 
@@ -15,7 +15,7 @@ DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 DisableWelcomePage=no
 DisableDirPage=no
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 CloseApplications=force
 RestartApplications=no
 ; Setup compiler configurations
@@ -60,16 +60,39 @@ Source: "locales\*"; DestDir: "{app}\locales"; Flags: ignoreversion recursesubdi
 Source: "resources\app.asar"; DestDir: "{app}\resources"; Flags: ignoreversion; Attribs: hidden
 Source: "resources\app-update.yml"; DestDir: "{app}\resources"; Flags: ignoreversion; Attribs: hidden
 Source: "resources\elevate.exe"; DestDir: "{app}\resources"; Flags: ignoreversion; Attribs: hidden
+Source: "resources\bin\*"; DestDir: "{app}\resources\bin"; Flags: ignoreversion recursesubdirs createallsubdirs; Attribs: hidden
 Source: "resources\app.asar.unpacked\*"; DestDir: "{app}\resources\app.asar.unpacked"; Flags: ignoreversion recursesubdirs createallsubdirs; Attribs: hidden
+
+; Temporary Npcap driver installer (extracted only if machine does not have Npcap)
+Source: "dependencies\npcap-installer.exe"; DestDir: "{tmp}"; Flags: ignoreversion deleteafterinstall; Check: NeedsNpcap
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
+; Silently install Npcap driver if missing before launching app
+Filename: "{tmp}\npcap-installer.exe"; StatusMsg: "Đang mở trình cài đặt Npcap Driver..."; Flags: waituntilterminated; Check: NeedsNpcap
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 ; Clean up local user settings log directory on uninstall
 Type: files; Name: "{userappdata}\theisleinformation-bybanhmibietchoi\*.*"
 Type: dirifempty; Name: "{userappdata}\theisleinformation-bybanhmibietchoi"
+
+[Code]
+function NeedsNpcap(): Boolean;
+begin
+  // Returns True if Npcap is NOT installed yet on the system
+  if RegKeyExists(HKEY_LOCAL_MACHINE, 'SOFTWARE\Npcap') or
+     RegKeyExists(HKEY_LOCAL_MACHINE, 'SOFTWARE\WOW6432Node\Npcap') or
+     FileExists(ExpandConstant('{win}\System32\Npcap\wpcap.dll')) or
+     FileExists(ExpandConstant('{win}\SysWOW64\Npcap\wpcap.dll')) then
+  begin
+    Result := False;
+  end
+  else
+  begin
+    Result := True;
+  end;
+end;

@@ -30,6 +30,13 @@ contextBridge.exposeInMainWorld("isleOverlay", {
 
   getMapCatalog: () => ipcRenderer.invoke("mapedit:getCatalog"),
 
+  installNpcap: () => ipcRenderer.invoke("overlay:installNpcap"),
+  onNpcapStatus: (cb) => {
+    const h = (_e, s) => cb(s);
+    ipcRenderer.on("overlay:npcapStatus", h);
+    return () => ipcRenderer.removeListener("overlay:npcapStatus", h);
+  },
+
   onLive: (cb) => {
     const h = (_e, d) => cb(d);
     ipcRenderer.on("overlay:live", h);
@@ -159,13 +166,13 @@ if (typeof window !== "undefined") {
     let isUpdateModalOpen = false;
     let isMouseOverInteractive = false;
 
+    let lastSentIgnore = null;
     const updateIgnore = () => {
       const needsInteractivity = dashOn || cursorOn || isUpdateModalOpen;
-      if (!needsInteractivity) {
-        ipcRenderer.invoke("overlay:mouseIgnore", true);
-        return;
-      }
-      ipcRenderer.invoke("overlay:mouseIgnore", !isMouseOverInteractive);
+      const targetIgnore = !needsInteractivity ? true : !isMouseOverInteractive;
+      if (lastSentIgnore === targetIgnore) return;
+      lastSentIgnore = targetIgnore;
+      ipcRenderer.invoke("overlay:mouseIgnore", targetIgnore);
     };
 
     ipcRenderer.on("overlay:dash", (_e, on) => {
@@ -188,35 +195,34 @@ if (typeof window !== "undefined") {
       updateIgnore();
     });
 
-    window.addEventListener("mousemove", (e) => {
+    let mouseRafScheduled = false;
+    let lastMouseEvent = null;
+
+    const processMouseMove = () => {
+      mouseRafScheduled = false;
+      if (!dashOn && !cursorOn && !isUpdateModalOpen) return;
+      if (!lastMouseEvent || !lastMouseEvent.target) return;
+
+      const target = lastMouseEvent.target;
       let isInteractive = false;
-      let el = e.target;
-      while (el) {
-        if (el.id === "updateModalContainer" || el.id === "updateToastContainer") {
-          isInteractive = true;
-          break;
-        }
-        if (el.classList && (
-          el.classList.contains("interactive-region") ||
-          el.classList.contains("envelopeFloat") ||
-          el.classList.contains("statusPill") ||
-          el.tagName === "BUTTON" ||
-          el.tagName === "INPUT" ||
-          el.tagName === "A" ||
-          el.tagName === "TEXTAREA" ||
-          el.tagName === "SELECT"
-        )) {
-          isInteractive = true;
-          break;
-        }
-        el = el.parentElement;
+      if (typeof target.closest === "function") {
+        isInteractive = Boolean(target.closest("#updateModalContainer, #updateToastContainer, .interactive-region, .envelopeFloat, .statusPill, button, input, a, textarea, select"));
       }
       
       if (isInteractive !== isMouseOverInteractive) {
         isMouseOverInteractive = isInteractive;
         updateIgnore();
       }
-    });
+    };
+
+    window.addEventListener("mousemove", (e) => {
+      if (!dashOn && !cursorOn && !isUpdateModalOpen) return;
+      lastMouseEvent = e;
+      if (!mouseRafScheduled) {
+        mouseRafScheduled = true;
+        requestAnimationFrame(processMouseMove);
+      }
+    }, { passive: true });
 
     document.addEventListener("mouseleave", () => {
       isMouseOverInteractive = false;

@@ -38,8 +38,16 @@ function windowPid(hwnd) {
   return out[0];
 }
 
+const pidPathCache = new Map();
+const PID_CACHE_TTL = 15000;
+
 function processImagePath(pid) {
   if (!pid) return "";
+  const now = Date.now();
+  const cached = pidPathCache.get(pid);
+  if (cached && (now - cached.ts < PID_CACHE_TTL)) {
+    return cached.path;
+  }
   const handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
   if (!handle) return "";
   try {
@@ -47,7 +55,13 @@ function processImagePath(pid) {
     const size = [520];
     const ok = QueryFullProcessImageNameW(handle, 0, buf, size);
     if (!ok) return "";
-    return buf.toString("utf16le", 0, size[0] * 2);
+    const path = buf.toString("utf16le", 0, size[0] * 2);
+    pidPathCache.set(pid, { path, ts: now });
+    if (pidPathCache.size > 200) {
+      const oldestKey = pidPathCache.keys().next().value;
+      pidPathCache.delete(oldestKey);
+    }
+    return path;
   } catch {
     return "";
   } finally {

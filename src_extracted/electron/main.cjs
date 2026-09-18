@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, net, shell, screen, Tray, Menu, safeStorage
 const { autoUpdater } = require("electron-updater");
 const path = require("path");
 const fs = require("fs");
+const { spawn } = require("child_process");
 
 app.setPath("userData", path.join(app.getPath("appData"), "theisleinformation-bybanhmibietchoi"));
 
@@ -156,37 +157,53 @@ const decryptToken = (stored) => {
   return stored;
 };
 
+let cachedSettings = null;
+
 const readSettings = () => {
+  if (cachedSettings) return cachedSettings;
   try {
     const s = normalizeSettings(JSON.parse(fs.readFileSync(SETTINGS_FILE(), "utf8")));
     s.overlayToken = decryptToken(s.overlayToken);
+    cachedSettings = s;
     return s;
   } catch {
-    return { ...defaultSettings };
+    cachedSettings = { ...defaultSettings };
+    return cachedSettings;
   }
 };
 
 const writeSettings = (patch) => {
+  const current = readSettings();
   const merged = normalizeSettings({
-    ...readSettings(),
+    ...current,
     ...(patch && typeof patch === "object" ? patch : {}),
   });
-  const onDisk = { ...merged, overlayToken: encryptToken(merged.overlayToken) };
-  fs.mkdirSync(path.dirname(SETTINGS_FILE()), { recursive: true });
-  fs.writeFileSync(SETTINGS_FILE(), JSON.stringify(onDisk, null, 2), "utf8");
+  cachedSettings = merged;
+  try {
+    const onDisk = { ...merged, overlayToken: encryptToken(merged.overlayToken) };
+    fs.mkdirSync(path.dirname(SETTINGS_FILE()), { recursive: true });
+    fs.writeFileSync(SETTINGS_FILE(), JSON.stringify(onDisk, null, 2), "utf8");
+  } catch (err) {
+    logInfo(`Error writing settings to disk: ${err ? err.message : err}`);
+  }
   return merged;
 };
 
-// Performance Optimizations
-app.commandLine.appendSwitch("js-flags", "--max-old-space-size=128");
+// Performance Optimizations for Maximum Smoothness & Zero Stutter
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=512 --expose-gc");
 app.commandLine.appendSwitch("force_high_performance_gpu");
 app.commandLine.appendSwitch("enable-gpu-rasterization");
+app.commandLine.appendSwitch("enable-oop-rasterization");
 app.commandLine.appendSwitch("enable-accelerated-2d-canvas");
+app.commandLine.appendSwitch("enable-accelerated-video-decode");
 app.commandLine.appendSwitch("disable-software-rasterizer");
 app.commandLine.appendSwitch("enable-zero-copy");
+app.commandLine.appendSwitch("disable-gpu-watchdog");
 app.commandLine.appendSwitch("disable-background-timer-throttling");
 app.commandLine.appendSwitch("disable-renderer-backgrounding");
-app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion");
+app.commandLine.appendSwitch("wm-window-animations-disabled");
+app.commandLine.appendSwitch("enable-native-gpu-memory-buffers");
+app.commandLine.appendSwitch("disable-features", "CalculateNativeWinOcclusion,IntensiveWakeUpThrottling");
 
 if (readSettings().compatMode) {
   app.commandLine.appendSwitch("disable-direct-composition");
@@ -268,6 +285,16 @@ const createWindow = () => {
 };
 
 let radarWindow = null;
+let radarSaveTimer = null;
+
+function saveRadarBounds() {
+  if (radarSaveTimer) clearTimeout(radarSaveTimer);
+  radarSaveTimer = setTimeout(() => {
+    if (radarWindow && !radarWindow.isDestroyed()) {
+      writeSettings({ radarBounds: radarWindow.getBounds() });
+    }
+  }, 250);
+}
 
 function openRadar() {
   if (radarWindow && !radarWindow.isDestroyed()) {
@@ -276,7 +303,7 @@ function openRadar() {
     return;
   }
   const s = readSettings();
-  if (!s.overlayToken) {
+  if (!s.overlayToken && !telemetryProcess) {
     return;
   }
   const b = s.radarBounds || null;
@@ -323,15 +350,9 @@ function openRadar() {
   radarWindow.once("ready-to-show", () => {
     if (radarWindow && !radarWindow.isDestroyed()) radarWindow.show();
   });
-  let radarSaveTimer = null;
-  const saveBounds = () => {
-    if (radarSaveTimer) clearTimeout(radarSaveTimer);
-    radarSaveTimer = setTimeout(() => {
-      if (radarWindow && !radarWindow.isDestroyed()) writeSettings({ radarBounds: radarWindow.getBounds() });
-    }, 200);
-  };
-  radarWindow.on("resize", saveBounds);
-  radarWindow.on("move", saveBounds);
+
+  radarWindow.on("resize", saveRadarBounds);
+  radarWindow.on("move", saveRadarBounds);
   radarWindow.on("closed", () => {
     radarWindow = null;
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("radar:changed", { open: false });
@@ -557,22 +578,31 @@ function currentCursorCode() {
   return cursorCodeFrom(s.cursorKey);
 }
 
-function matchCombo(e, comboStr) {
-  if (!comboStr || typeof comboStr !== "string") return false;
+const comboCache = new Map();
+function parseCombo(comboStr) {
+  if (!comboStr || typeof comboStr !== "string") return null;
+  const cached = comboCache.get(comboStr);
+  if (cached !== undefined) return cached;
   const parts = comboStr.split("+");
   const keyName = parts[parts.length - 1];
   const targetCode = cursorCodeFrom(keyName);
-  if (targetCode == null || e.keycode !== targetCode) return false;
-  
-  const wantCtrl = parts.includes("Ctrl");
-  const wantShift = parts.includes("Shift");
-  const wantAlt = parts.includes("Alt");
-  
+  const parsed = {
+    targetCode,
+    wantCtrl: parts.includes("Ctrl"),
+    wantShift: parts.includes("Shift"),
+    wantAlt: parts.includes("Alt"),
+  };
+  comboCache.set(comboStr, parsed);
+  return parsed;
+}
+
+function matchCombo(e, comboStr) {
+  const parsed = parseCombo(comboStr);
+  if (!parsed || parsed.targetCode == null || e.keycode !== parsed.targetCode) return false;
   const hasCtrl = !!(e.ctrlKey || (e.mask & 2));
   const hasShift = !!(e.shiftKey || (e.mask & 1));
   const hasAlt = !!(e.altKey || (e.mask & 4));
-  
-  return wantCtrl === hasCtrl && wantShift === hasShift && wantAlt === hasAlt;
+  return parsed.wantCtrl === hasCtrl && parsed.wantShift === hasShift && parsed.wantAlt === hasAlt;
 }
 
 function startCursorHook() {
@@ -661,11 +691,16 @@ function displayForBounds(b) {
   });
 }
 
+let lastSetOverlayBounds = null;
 function positionOverlay() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const wa = displayForBounds(gameBounds).bounds;
-  const cur = mainWindow.getBounds();
-  if (cur.x !== wa.x || cur.y !== wa.y || cur.width !== wa.width || cur.height !== wa.height) {
+  if (!lastSetOverlayBounds ||
+      lastSetOverlayBounds.x !== wa.x ||
+      lastSetOverlayBounds.y !== wa.y ||
+      lastSetOverlayBounds.width !== wa.width ||
+      lastSetOverlayBounds.height !== wa.height) {
+    lastSetOverlayBounds = wa;
     mainWindow.setBounds(wa);
   }
 }
@@ -685,6 +720,8 @@ function loadNw() {
 const GAME_WINDOW_RE = /theisle|isle-win64/i;
 let gameHwnd = null;
 let lastGameScanTs = 0;
+let lastOverlayState = null;
+let prevWasShow = false;
 
 function trackGame() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
@@ -707,12 +744,14 @@ function trackGame() {
     let fgIsGame = false;
     let fgPid = 0;
     if (fg) {
-      fgPid = n.windowPid(fg);
-      if (fgPid && fgPid !== process.pid) {
-        const fgPath = n.processImagePath(fgPid);
-        if (fgPath && GAME_WINDOW_RE.test(fgPath)) {
-          fgIsGame = true;
-          if (!gameHwnd || !n.IsWindow(gameHwnd)) {
+      if (gameHwnd && n.isSameWindow(fg, gameHwnd)) {
+        fgIsGame = true;
+      } else {
+        fgPid = n.windowPid(fg);
+        if (fgPid && fgPid !== process.pid) {
+          const fgPath = n.processImagePath(fgPid);
+          if (fgPath && GAME_WINDOW_RE.test(fgPath)) {
+            fgIsGame = true;
             gameHwnd = fg;
           }
         }
@@ -737,7 +776,7 @@ function trackGame() {
     positionOverlay();
     const justShown = !mainWindow.isVisible();
     if (justShown) mainWindow.showInactive();
-    if (justShown || Date.now() - lastTopmostTs > 2000) {
+    if (justShown || (!prevWasShow && shouldShow) || Date.now() - lastTopmostTs > 45000) {
       mainWindow.setAlwaysOnTop(true, "screen-saver");
       lastTopmostTs = Date.now();
       if (radarWindow && !radarWindow.isDestroyed()) {
@@ -756,17 +795,27 @@ function trackGame() {
       radarWindow.hide();
     }
   }
+  prevWasShow = shouldShow;
+
   const hasFocus = activeIsGame || activeIsOverlay;
   if (!hasFocus && cursorOn) {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
   } else if (hasFocus && cursorOn) {
     // Let the preload script manage mouseIgnore dynamically based on hover state.
   }
-  mainWindow.webContents.send("overlay:state", {
+
+  const nextState = {
     gameDetected: gameBounds != null,
     active: shouldShow,
     focused: activeIsGame || activeIsOverlay,
-  });
+  };
+  if (!lastOverlayState ||
+      lastOverlayState.gameDetected !== nextState.gameDetected ||
+      lastOverlayState.active !== nextState.active ||
+      lastOverlayState.focused !== nextState.focused) {
+    lastOverlayState = nextState;
+    mainWindow.webContents.send("overlay:state", nextState);
+  }
 }
 
 async function apiFetch(method, pathname, body) {
@@ -808,9 +857,6 @@ let liveWs = null;
 let liveBackoff = 1000;
 let liveTimer = null;
 let liveStopped = false;
-let lastLiveSendTs = 0;
-let pendingLiveFrame = null;
-let liveSendTimeout = null;
 
 function baseWs() {
   return baseApi().replace(/^http/i, "ws");
@@ -843,10 +889,14 @@ async function sendOverlayHello(ws, token) {
 }
 
 let fallbackTimer = null;
+let isNpcapAvailable = false;
 
 function startHttpFallbackPolling() {
   if (fallbackTimer) return;
   fallbackTimer = setInterval(async () => {
+    // Only pause HTTP fallback if local telemetry has Npcap actively capturing or remote WS is connected
+    const localActive = isNpcapAvailable && ((localTelemetryWs && localTelemetryWs.readyState === WebSocket.OPEN) || (telemetryProcess && !telemetryProcess.killed));
+    if (localActive) return;
     const wsConnected = liveWs && liveWs.readyState === WebSocket.OPEN;
     if (wsConnected) return;
     const token = readSettings().overlayToken;
@@ -857,41 +907,58 @@ function startHttpFallbackPolling() {
       });
       if (res.ok) {
         const me = await res.json();
-        if (me && me.position && me.steamId) {
+        if (me && me.steamId) {
           const livePayload = {
             steamId: me.steamId,
-            position: me.position,
+            hasDino: Boolean(me.species || me.hasData || me.growth != null),
+            species: me.species,
+            growth: me.growth,
+            health: me.health,
+            maxHealth: me.maxHealth,
+            stamina: me.stamina,
+            maxStamina: me.maxStamina,
+            hunger: me.hunger,
+            maxHunger: me.maxHunger,
+            thirst: me.thirst,
+            maxThirst: me.maxThirst,
+            vitals: {
+              growth: me.growth,
+              health: me.health,
+              maxHealth: me.maxHealth,
+              stamina: me.stamina,
+              maxStamina: me.maxStamina,
+              hunger: me.hunger,
+              maxHunger: me.maxHunger,
+              thirst: me.thirst,
+              maxThirst: me.maxThirst
+            },
+            position: me.position || null,
             skin: me.skin || null
           };
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            mainWindow.webContents.send("overlay:live", livePayload);
-          }
-          radarSend("overlay:live", livePayload);
+          broadcastLiveFrame(livePayload);
         }
       }
     } catch (err) {
       // Ignore network errors
     }
-  }, 3000);
+  }, 2000);
 }
 
 function connectLive() {
   liveStopped = false;
   const token = readSettings().overlayToken;
-  try {
-    fs.appendFileSync(path.join(app.getPath("userData"), "connect_live.log"), `connectLive called. Has token: ${!!token}\n`, "utf8");
-  } catch {}
+  logInfo(`connectLive called. Has token: ${!!token}`);
   if (!token) return;
   try {
     fetch(`${baseApi()}/api/overlay/me`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => res.text().then(text => {
-         fs.appendFileSync(path.join(app.getPath("userData"), "ws_error.log"), `HTTP test /api/overlay/me: status=${res.status} body=${text}\n`, "utf8");
+         logInfo(`HTTP test /api/overlay/me: status=${res.status}`);
       }))
       .catch(err => {
-         fs.appendFileSync(path.join(app.getPath("userData"), "ws_error.log"), `HTTP test failed: ${err.message}\n`, "utf8");
+         logInfo(`HTTP test failed: ${err.message}`);
       });
   } catch (e) {
-     fs.appendFileSync(path.join(app.getPath("userData"), "ws_error.log"), `HTTP test catch error: ${e.message}\n`, "utf8");
+     logInfo(`HTTP test catch error: ${e.message}`);
   }
     if (liveWs) {
     try {
@@ -930,26 +997,7 @@ function connectLive() {
       return;
     }
         if (frame && frame.t === "live" && frame.d) {
-      const now = Date.now();
-      if (now - lastLiveSendTs >= 33) {
-        lastLiveSendTs = now;
-        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("overlay:live", frame.d);
-        radarSend("overlay:live", frame.d);
-        if (liveSendTimeout) {
-          clearTimeout(liveSendTimeout);
-          liveSendTimeout = null;
-        }
-      } else {
-        pendingLiveFrame = frame.d;
-        if (!liveSendTimeout) {
-          liveSendTimeout = setTimeout(() => {
-            lastLiveSendTs = Date.now();
-            if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("overlay:live", pendingLiveFrame);
-            radarSend("overlay:live", pendingLiveFrame);
-            liveSendTimeout = null;
-          }, 33 - (now - lastLiveSendTs));
-        }
-      }
+      broadcastLiveFrame(frame.d);
     } else if (frame && frame.t === "troll") {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("overlay:troll", frame);
     } else if (frame && frame.type === "ticket") {
@@ -993,12 +1041,234 @@ function stopLive() {
   }
 }
 
+// --- LOCAL TELEMETRY ENGINE (0ms Latency via Npcap + UE5 Decoder) ---
+let telemetryProcess = null;
+let localTelemetryWs = null;
+let localTelemetryTimer = null;
+const localTelemetryPort = 28888;
+let lastLocalLiveSendTs = 0;
+let pendingLocalLiveFrame = null;
+let localLiveSendTimeout = null;
+
+function findTelemetryServicePath() {
+  const candidates = [
+    path.join(process.resourcesPath, "bin", "TheIsleTelemetryService.exe"),
+    path.join(__dirname, "..", "..", "resources", "bin", "TheIsleTelemetryService.exe"),
+    path.join(__dirname, "..", "resources", "bin", "TheIsleTelemetryService.exe"),
+    path.join(app.getAppPath(), "resources", "bin", "TheIsleTelemetryService.exe"),
+    path.join(process.cwd(), "resources", "bin", "TheIsleTelemetryService.exe"),
+    path.join(__dirname, "TheIsleTelemetryService.exe"),
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {}
+  }
+  return null;
+}
+
+function startLocalTelemetryService() {
+  if (telemetryProcess && !telemetryProcess.killed) return;
+  const exePath = findTelemetryServicePath();
+  if (!exePath) {
+    logInfo("TheIsleTelemetryService.exe not found on disk, continuing with remote fallback.");
+    return;
+  }
+  try {
+    logInfo(`Starting local telemetry service: ${exePath}`);
+    telemetryProcess = spawn(
+      exePath,
+      ["--port", String(localTelemetryPort), "--parent-pid", String(process.pid)],
+      {
+        detached: false,
+        windowsHide: true,
+        stdio: "ignore",
+      }
+    );
+    telemetryProcess.on("error", (err) => {
+      logInfo(`Local telemetry service error: ${err.message}`);
+    });
+    telemetryProcess.on("exit", (code, signal) => {
+      logInfo(`Local telemetry service exited with code ${code}, signal ${signal}`);
+      telemetryProcess = null;
+    });
+  } catch (err) {
+    logInfo(`Failed to spawn local telemetry service: ${err.message}`);
+  }
+
+  // Connect WebSocket client to local telemetry service
+  setTimeout(() => {
+    connectLocalTelemetryWs();
+  }, 1200);
+}
+
+let lastBroadcastFrame = null;
+let lastBroadcastTs = 0;
+
+function hasSignificantTelemetryChange(prev, curr) {
+  if (!prev) return true;
+  const pPos = prev.position;
+  const cPos = curr.position;
+  if (!pPos && cPos) return true;
+  if (pPos && cPos) {
+    if (Math.abs((pPos.x || 0) - (cPos.x || 0)) > 0.4 || Math.abs((pPos.y || 0) - (cPos.y || 0)) > 0.4) return true;
+    const pHeading = pPos.heading ?? pPos.yaw ?? 0;
+    const cHeading = cPos.heading ?? cPos.yaw ?? 0;
+    if (Math.abs(pHeading - cHeading) > 0.15) return true;
+  }
+  const pVit = prev.vitals || prev;
+  const cVit = curr.vitals || curr;
+  if (Boolean(pVit) !== Boolean(cVit)) return true;
+  if (pVit && cVit) {
+    if (Math.abs((pVit.health ?? 0) - (cVit.health ?? 0)) > 0.1) return true;
+    if (Math.abs((pVit.stamina ?? 0) - (cVit.stamina ?? 0)) > 0.1) return true;
+    if (Math.abs((pVit.hunger ?? 0) - (cVit.hunger ?? 0)) > 0.1) return true;
+    if (Math.abs((pVit.thirst ?? 0) - (cVit.thirst ?? 0)) > 0.1) return true;
+  }
+  return false;
+}
+
+function broadcastLiveFrame(frameData) {
+  const now = Date.now();
+  const isSignificant = hasSignificantTelemetryChange(lastBroadcastFrame, frameData);
+
+  // If stationary and vitals haven't changed, send at most 1 FPS (1000ms heartbeat)
+  if (!isSignificant && (now - lastBroadcastTs < 1000)) {
+    return;
+  }
+
+  // Cap active updates at 60 FPS (16ms)
+  if (now - lastBroadcastTs >= 16) {
+    lastBroadcastTs = now;
+    lastBroadcastFrame = frameData;
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("overlay:live", frameData);
+    }
+    radarSend("overlay:live", frameData);
+    if (localLiveSendTimeout) {
+      clearTimeout(localLiveSendTimeout);
+      localLiveSendTimeout = null;
+    }
+  } else {
+    pendingLocalLiveFrame = frameData;
+    if (!localLiveSendTimeout) {
+      localLiveSendTimeout = setTimeout(() => {
+        lastBroadcastTs = Date.now();
+        lastBroadcastFrame = pendingLocalLiveFrame;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("overlay:live", pendingLocalLiveFrame);
+        }
+        radarSend("overlay:live", pendingLocalLiveFrame);
+        localLiveSendTimeout = null;
+      }, 16 - (now - lastBroadcastTs));
+    }
+  }
+}
+
+function connectLocalTelemetryWs() {
+  if (localTelemetryWs) {
+    try {
+      localTelemetryWs.terminate();
+    } catch {}
+    localTelemetryWs = null;
+  }
+  try {
+    const ws = new WebSocket(`ws://127.0.0.1:${localTelemetryPort}/ws`);
+    localTelemetryWs = ws;
+
+    ws.on("open", () => {
+      logInfo("Connected to local telemetry service WebSocket.");
+    });
+
+    ws.on("message", (raw) => {
+      try {
+        const frame = JSON.parse(raw.toString());
+        if (frame && frame.t === "live" && frame.d) {
+          const sid = readSettings().steamId;
+          if (sid && !frame.d.steamId) {
+            frame.d.steamId = sid;
+          }
+          broadcastLiveFrame(frame.d);
+        } else if (frame && frame.t === "status") {
+          isNpcapAvailable = Boolean(frame.npcap);
+          logInfo(`Local telemetry status report: ${JSON.stringify(frame)}`);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send("overlay:npcapStatus", frame);
+          }
+        }
+      } catch {}
+    });
+
+    ws.on("close", () => {
+      if (localTelemetryWs === ws) localTelemetryWs = null;
+      scheduleLocalTelemetryReconnect();
+    });
+
+    ws.on("error", () => {
+      try { ws.terminate(); } catch {}
+      if (localTelemetryWs === ws) localTelemetryWs = null;
+      scheduleLocalTelemetryReconnect();
+    });
+  } catch {
+    scheduleLocalTelemetryReconnect();
+  }
+}
+
+function scheduleLocalTelemetryReconnect() {
+  if (localTelemetryTimer) return;
+  localTelemetryTimer = setTimeout(() => {
+    localTelemetryTimer = null;
+    connectLocalTelemetryWs();
+  }, 2500);
+}
+
+function stopLocalTelemetryService() {
+  if (localTelemetryTimer) {
+    clearTimeout(localTelemetryTimer);
+    localTelemetryTimer = null;
+  }
+  if (localLiveSendTimeout) {
+    clearTimeout(localLiveSendTimeout);
+    localLiveSendTimeout = null;
+  }
+  pendingLocalLiveFrame = null;
+  if (localTelemetryWs) {
+    try {
+      localTelemetryWs.terminate();
+    } catch {}
+    localTelemetryWs = null;
+  }
+  if (telemetryProcess) {
+    try {
+      telemetryProcess.kill();
+    } catch {}
+    telemetryProcess = null;
+  }
+}
+
 ipcMain.handle("overlay:openUrl", (_e, url) => {
   if (typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
     shell.openExternal(url).catch(() => {});
     return true;
   }
   return false;
+});
+
+ipcMain.handle("overlay:installNpcap", () => {
+  const candidatePaths = [
+    path.join(app.getAppPath(), "..", "dependencies", "npcap-installer.exe"),
+    path.join(process.resourcesPath || "", "..", "dependencies", "npcap-installer.exe"),
+    path.join(__dirname, "..", "dependencies", "npcap-installer.exe"),
+    path.join(process.cwd(), "dependencies", "npcap-installer.exe")
+  ];
+  const installer = candidatePaths.find(p => fs.existsSync(p));
+  if (installer) {
+    shell.openPath(installer);
+    return { ok: true, path: installer };
+  } else {
+    shell.openExternal("https://npcap.com/#download");
+    return { ok: false, message: "Không tìm thấy bộ cài npcap-installer.exe. Đã mở trang chủ Npcap để tải." };
+  }
 });
 
 
@@ -1107,9 +1377,13 @@ ipcMain.handle("overlay:setSettings", (_e, next) => {
   return merged;
 });
 ipcMain.handle("overlay:getState", () => ({ gameDetected: gameBounds != null }));
+let currentIgnoreMouse = null;
 ipcMain.handle("overlay:mouseIgnore", (_e, ignore) => {
+  const boolVal = Boolean(ignore);
+  if (currentIgnoreMouse === boolVal) return;
+  currentIgnoreMouse = boolVal;
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setIgnoreMouseEvents(Boolean(ignore), { forward: true });
+    mainWindow.setIgnoreMouseEvents(boolVal, { forward: true });
   }
 });
 ipcMain.handle("overlay:quit", () => app.quit());
@@ -1128,13 +1402,20 @@ ipcMain.handle("radar:getBounds", () =>
 );
 ipcMain.handle("radar:setBounds", (_e, b) => {
   if (radarWindow && !radarWindow.isDestroyed() && b) {
-    radarWindow.setBounds({
-      x: Math.round(b.x),
-      y: Math.round(b.y),
-      width: Math.max(160, Math.round(b.width)),
-      height: Math.max(160, Math.round(b.height)),
-    });
-    saveBounds();
+    const targetX = Math.round(b.x);
+    const targetY = Math.round(b.y);
+    const targetW = Math.max(160, Math.round(b.width));
+    const targetH = Math.max(160, Math.round(b.height));
+    const cur = radarWindow.getBounds();
+    if (cur.x !== targetX || cur.y !== targetY || cur.width !== targetW || cur.height !== targetH) {
+      radarWindow.setBounds({
+        x: targetX,
+        y: targetY,
+        width: targetW,
+        height: targetH,
+      });
+    }
+    saveRadarBounds();
   }
 });
 
@@ -1651,9 +1932,13 @@ if (!gotLock) {
    app.whenReady().then(() => {
     logInfo("app.whenReady fired.");
     const current = readSettings();
+    const savedSid = current.savedSteamId || current.steamId;
+    const savedTok = current.savedOverlayToken || current.overlayToken;
     writeSettings({
-      steamId: null,
-      overlayToken: null,
+      steamId: savedSid || null,
+      overlayToken: savedTok || null,
+      savedSteamId: savedSid || null,
+      savedOverlayToken: savedTok || null,
       panels: current.panels || { heart: false, stats: true, prime: true, radar: true },
       radarOpen: typeof current.radarOpen === "boolean" ? current.radarOpen : true,
       radarBounds: current.radarBounds || { x: 10, y: 10, width: 320, height: 320 },
@@ -1668,6 +1953,7 @@ if (!gotLock) {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.setOpacity(boot.opacity);
     }
+    startLocalTelemetryService();
     connectLive();
     startHttpFallbackPolling();
     if (boot.panels && boot.panels.radar) {
@@ -1684,6 +1970,15 @@ if (!gotLock) {
       void checkLicense();
     }, 5 * 60 * 1000);
 
+    // Periodic idle GC to prevent V8 memory accumulation and lag spikes
+    setInterval(() => {
+      try {
+        if (typeof global.gc === "function") {
+          global.gc();
+        }
+      } catch {}
+    }, 5 * 60 * 1000);
+
     const startUrl = process.argv.find((a) => typeof a === "string" && a.includes(`${AUTH_PROTOCOL}://`));
     if (startUrl) {
       let cleanUrl = startUrl.trim();
@@ -1697,7 +1992,15 @@ if (!gotLock) {
 
 app.on("before-quit", () => {
   try {
+    stopLocalTelemetryService();
+  } catch {}
+  try {
     if (uio && uioStarted) uio.uIOhook.stop();
+  } catch {}
+});
+app.on("will-quit", () => {
+  try {
+    stopLocalTelemetryService();
   } catch {}
 });
 app.on("window-all-closed", () => {
