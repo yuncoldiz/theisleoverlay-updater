@@ -15,3 +15,7 @@ Welcome to the project custom guidelines. Follow these rules to ensure secure co
   1. **Strict Local Isolation**: When developing new features, only run and test code locally on your development machine. 
   2. **Do Not Push Untested Updates**: Never upload updated package files (`Setup.exe` / `latest.yml`) to the official update host (e.g., GitHub Releases or Web Server) until you have fully verified the changes locally and through beta testers.
   3. **Auto-Updater Safety**: The `initAutoUpdate()` function in `main.cjs` is disabled by default. If you decide to re-enable it, always ensure that [app-update.yml](file:///c:/Users/YunColdiz/Desktop/theisleoverlay-banhmibietchoi/resources/app-update.yml) points to the custom update server owned by you (e.g., your own GitHub repository/website), **never** to the original author's official update URL (`islepilot.eu`). Otherwise, users will receive official updates that will overwrite and erase all your custom channel overlays and logo modifications.
+
+## 4. Remote Operating & Fast Online Updates
+- **Rule**: Whenever the user requests to update online parameters (social links, season reset, admin key, donate info, broadcast announcements), follow the standard playbook in [OPERATING_PROCEDURE.md](file:///c:/Users/YunColdiz/Desktop/theisleoverlay-banhmibietchoi/OPERATING_PROCEDURE.md). Update `remote_config.json` and sync online immediately.
+- **Why**: Allows instant live updates to all distributed users in under 30 seconds without rebuilding or redistributing `Setup.exe`.
