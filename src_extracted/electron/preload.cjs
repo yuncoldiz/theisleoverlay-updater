@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld("isleOverlay", {
   apiGet: (pathname) => ipcRenderer.invoke("api:get", pathname),
   apiPost: (pathname, body) => ipcRenderer.invoke("api:post", pathname, body),
   apiGetFile: (pathname) => ipcRenderer.invoke("api:getfile", pathname),
+  getRemoteConfig: () => ipcRenderer.invoke("remoteConfig:get"),
 
   getMapCatalog: () => ipcRenderer.invoke("mapedit:getCatalog"),
 
@@ -177,11 +178,13 @@ if (typeof window !== "undefined") {
 
     ipcRenderer.on("overlay:dash", (_e, on) => {
       dashOn = on;
+      lastSentIgnore = null;
       updateIgnore();
     });
 
     ipcRenderer.on("overlay:cursor", (_e, on) => {
       cursorOn = on;
+      lastSentIgnore = null;
       updateIgnore();
     });
 
@@ -206,7 +209,7 @@ if (typeof window !== "undefined") {
       const target = lastMouseEvent.target;
       let isInteractive = false;
       if (typeof target.closest === "function") {
-        isInteractive = Boolean(target.closest("#updateModalContainer, #updateToastContainer, .interactive-region, .envelopeFloat, .statusPill, button, input, a, textarea, select"));
+        isInteractive = Boolean(target.closest("#updateModalContainer, #updateToastContainer, #socialGateContainer, #socialGateOverlay, .interactive-region, .envelopeFloat, .statusPill, button, input, a, textarea, select"));
       }
       
       if (isInteractive !== isMouseOverInteractive) {

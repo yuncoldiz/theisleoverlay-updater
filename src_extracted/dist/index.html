@@ -283,12 +283,252 @@
       .toastClose:hover {
         color: #ffffff;
       }
+    
+      /* Standalone Social Checklist Gate Styles */
+      #socialGateOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(4, 8, 6, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 999998;
+        pointer-events: auto;
+      }
+      #socialGateContainer {
+        width: min(520px, calc(100vw - 36px));
+        background: linear-gradient(180deg, #131d17 0%, #080d0a 100%);
+        border: 1px solid rgba(124, 242, 166, 0.4);
+        border-radius: 16px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, 0.9), 0 0 30px rgba(124, 242, 166, 0.18);
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        color: #dcf1e2;
+        font-family: "Inter", system-ui, sans-serif;
+        animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: auto;
+      }
+      .gateHeader {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        border-bottom: 1px solid rgba(124, 242, 166, 0.15);
+        padding-bottom: 12px;
+      }
+      .gateLogo {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        border: 2px solid #7cf2a6;
+        box-shadow: 0 0 12px rgba(124, 242, 166, 0.5);
+        object-fit: cover;
+      }
+      .gateTitleGroup {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .gateMainTitle {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 14.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #7cf2a6;
+        text-shadow: 0 0 10px rgba(124, 242, 166, 0.4);
+      }
+      .gateSubtitle {
+        font-size: 11.5px;
+        color: #a3cbb3;
+        line-height: 1.4;
+      }
+      .gateMissionList {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin: 2px 0;
+      }
+      .gateMissionItem {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 14px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 10px;
+        transition: all 0.2s ease;
+      }
+      .gateMissionItem.done {
+        border-color: rgba(124, 242, 166, 0.4);
+        background: rgba(124, 242, 166, 0.06);
+      }
+      .gateMissionLeft {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .gateMissionIcon {
+        font-size: 18px;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+      }
+      .gateMissionText {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .gateMissionName {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: #fff;
+      }
+      .gateMissionDesc {
+        font-size: 10.5px;
+        color: #7f9588;
+      }
+      .gateBtn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 11.5px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-width: 96px;
+        border: 1px solid;
+      }
+      .gateBtn.yt { background: #ff00001a; border-color: #ff00004d; color: #ff5555; }
+      .gateBtn.fb { background: #1877f21a; border-color: #1877f24d; color: #4e9bfa; }
+      .gateBtn.tt { background: #ffffff10; border-color: rgba(255,255,255,0.25); color: #fff; }
+      .gateBtn.dc { background: #5865F21a; border-color: #5865F24d; color: #5865F2; }
+      .gateBtn.done {
+        background: rgba(124, 242, 166, 0.15) !important;
+        border-color: #7cf2a6 !important;
+        color: #7cf2a6 !important;
+        cursor: default;
+      }
+      .gateUnlockBtn {
+        width: 100%;
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        cursor: not-allowed;
+        border: 1px solid rgba(124, 242, 166, 0.2);
+        background: rgba(255, 255, 255, 0.05);
+        color: #556c5e;
+        transition: all 0.25s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-top: 4px;
+      }
+      .gateUnlockBtn.ready {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: #fff;
+        border-color: #7cf2a6;
+        box-shadow: 0 0 20px rgba(124, 242, 166, 0.4);
+        cursor: pointer;
+      }
+      .gateUnlockBtn.ready:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 0 25px rgba(124, 242, 166, 0.6);
+      }
+
     </style>
   </head>
   <body>
     <div id="root"></div>
 
     <!-- Standalone Cyberpunk Update Modal -->
+    
+    <!-- Standalone Social Checklist Gate Modal -->
+    <div id="socialGateOverlay" class="interactive-region">
+      <div id="socialGateContainer" class="interactive-region">
+        <div class="gateHeader">
+          <img src="./assets/logo.jpg" alt="Logo" class="gateLogo" onerror="this.src='./assets/donate_qr.png'" />
+          <div class="gateTitleGroup">
+            <div class="gateTitle">THEISLE OVERLAY - BÁNH MÌ BIẾT CHƠI</div>
+            <div class="gateSubtitle">Hoàn thành 4 bước ủng hộ Bánh Mì để mở khóa ứng dụng vĩnh viễn:</div>
+          </div>
+        </div>
+
+        <div class="gateMissionList">
+          <div class="gateMissionItem" id="missionItemYT">
+            <div class="gateMissionLeft">
+              <div class="gateMissionIcon" style="background:#ff000022;color:#ff5555;">🔴</div>
+              <div class="gateMissionText">
+                <div class="gateMissionName">Đăng ký Kênh YouTube</div>
+                <div class="gateMissionDesc">Kênh YouTube: BanhMiii</div>
+              </div>
+            </div>
+            <button class="gateBtn yt" id="btnMissionYT"><span>Mở YouTube</span></button>
+          </div>
+
+          <div class="gateMissionItem" id="missionItemTT">
+            <div class="gateMissionLeft">
+              <div class="gateMissionIcon" style="background:#ffffff15;color:#fff;">⚫</div>
+              <div class="gateMissionText">
+                <div class="gateMissionName">Follow Kênh TikTok</div>
+                <div class="gateMissionDesc">TikTok: @contentwithbanhmi</div>
+              </div>
+            </div>
+            <button class="gateBtn tt" id="btnMissionTT"><span>Mở TikTok</span></button>
+          </div>
+
+          <div class="gateMissionItem" id="missionItemFB">
+            <div class="gateMissionLeft">
+              <div class="gateMissionIcon" style="background:#1877f222;color:#4e9bfa;">🔵</div>
+              <div class="gateMissionText">
+                <div class="gateMissionName">Follow Fanpage Facebook</div>
+                <div class="gateMissionDesc">Fanpage: ContentWithBanhMi</div>
+              </div>
+            </div>
+            <button class="gateBtn fb" id="btnMissionFB"><span>Mở Facebook</span></button>
+          </div>
+
+          <div class="gateMissionItem" id="missionItemDC">
+            <div class="gateMissionLeft">
+              <div class="gateMissionIcon" style="background:#5865F222;color:#5865F2;">🟣</div>
+              <div class="gateMissionText">
+                <div class="gateMissionName">Tham gia Server Discord</div>
+                <div class="gateMissionDesc">Discord: discord.com/invite/P6jAfGrp4t</div>
+              </div>
+            </div>
+            <button class="gateBtn dc" id="btnMissionDC"><span>Vào Discord</span></button>
+          </div>
+        </div>
+
+        <button id="btnUnlockApp" class="gateUnlockBtn" disabled>
+          <span>🔒 HOÀN THÀNH 4 BƯỚC ĐỂ MỞ KHÓA</span>
+        </button>
+
+        <div id="gateAdminToggle" style="font-size: 11px; color: #7f9588; text-align: center; cursor: pointer; text-decoration: underline; margin-top: 4px;">
+          🔑 Bạn là Admin hoặc VIP? Nhập mã tại đây
+        </div>
+        <div id="gateAdminBox" style="display: none; margin-top: 2px; gap: 6px; width: 100%; align-items: center;">
+          <input type="password" id="inputAdminKey" class="interactive-region" placeholder="Nhập mã kích hoạt Admin / VIP..." autocomplete="off" spellcheck="false" style="flex: 1; padding: 7px 10px; background: rgba(0,0,0,0.5); border: 1px solid rgba(124, 242, 166, 0.4); border-radius: 6px; color: #7cf2a6; font-family: monospace; font-size: 12px; outline: none;" />
+          <button id="btnSubmitAdminKey" class="interactive-region" style="padding: 7px 12px; background: #10b981; border: 1px solid #7cf2a6; border-radius: 6px; color: #fff; font-weight: 700; cursor: pointer; font-size: 11.5px; white-space: nowrap;">Xác nhận</button>
+        </div>
+      </div>
+    </div>
+
     <div id="updateModalOverlay" class="interactive-region">
       <div id="updateModalContainer" class="interactive-region">
         <div class="updateHeader">
@@ -297,7 +537,7 @@
             <div class="updateMainTitle">BẢN CẬP NHẬT MỚI</div>
             <div class="updateVersionTag">
               <span>Phiên bản:</span>
-              <span id="updateVersionNumber" style="color:#7cf2a6; font-weight:700;">v1.0.5</span>
+              <span id="updateVersionNumber" style="color:#7cf2a6; font-weight:700;">v1.0.6</span>
             </div>
           </div>
         </div>
@@ -519,6 +759,184 @@
             });
           }
         }
+      
+        // --- Social Checklist Gate Logic with Remote Season Reset ---
+        (function initSocialGate() {
+          if (window.location.hash === "#radar") return;
+
+          // Admin bypass completely and permanently
+          if (localStorage.getItem("banhmi_is_admin_v1") === "true") return;
+
+          const gateOverlay = document.getElementById("socialGateOverlay");
+          const btnYT = document.getElementById("btnMissionYT");
+          const btnTT = document.getElementById("btnMissionTT");
+          const btnFB = document.getElementById("btnMissionFB");
+          const btnDC = document.getElementById("btnMissionDC");
+          const btnUnlock = document.getElementById("btnUnlockApp");
+
+          const itemYT = document.getElementById("missionItemYT");
+          const itemTT = document.getElementById("missionItemTT");
+          const itemFB = document.getElementById("missionItemFB");
+          const itemDC = document.getElementById("missionItemDC");
+          const subTitle = document.querySelector(".gateSubtitle");
+
+          if (!gateOverlay || !btnUnlock) return;
+
+          let activeSeason = 1;
+          let masterKey = "BANHMI-ADMIN-KEY1";
+          let socialUrls = {
+            youtube: "https://www.youtube.com/@ContentWithBanhMi",
+            tiktok: "https://www.tiktok.com/@contentwithbanhmi",
+            facebook: "https://www.facebook.com/ContentWithBanhMi",
+            discord: "https://discord.com/invite/P6jAfGrp4t"
+          };
+
+          // Check if local season is already completed
+          const savedSeason = parseInt(localStorage.getItem("banhmi_gate_season") || (localStorage.getItem("banhmi_social_gate_unlocked_v1") === "true" ? "1" : "0"), 10);
+          if (savedSeason >= 1) {
+            gateOverlay.style.display = "none";
+          } else {
+            gateOverlay.style.display = "flex";
+          }
+
+          function updateSeasonHeader(season) {
+            if (subTitle) {
+              subTitle.textContent = `[Mùa ${season}] Hoàn thành 4 bước ủng hộ Bánh Mì để mở khóa ứng dụng:`;
+            }
+          }
+          updateSeasonHeader(Math.max(1, savedSeason));
+
+          const status = { yt: false, tt: false, fb: false, dc: false };
+
+          if (window.isleOverlay && window.isleOverlay.getRemoteConfig) {
+            window.isleOverlay.getRemoteConfig().then(cfg => {
+              if (cfg) {
+                if (cfg.youtube) socialUrls.youtube = cfg.youtube;
+                if (cfg.tiktok) socialUrls.tiktok = cfg.tiktok;
+                if (cfg.facebook) socialUrls.facebook = cfg.facebook;
+                if (cfg.discord) socialUrls.discord = cfg.discord;
+                if (cfg.adminKey) masterKey = cfg.adminKey.trim();
+                if (cfg.gateSeason && Number.isInteger(Number(cfg.gateSeason))) {
+                  activeSeason = parseInt(cfg.gateSeason, 10);
+                }
+              }
+
+              if (localStorage.getItem("banhmi_is_admin_v1") === "true") {
+                gateOverlay.style.display = "none";
+                return;
+              }
+
+              const currentUnlocked = parseInt(localStorage.getItem("banhmi_gate_season") || (localStorage.getItem("banhmi_social_gate_unlocked_v1") === "true" ? "1" : "0"), 10);
+              if (currentUnlocked < activeSeason) {
+                updateSeasonHeader(activeSeason);
+                gateOverlay.style.display = "flex";
+                status.yt = false; status.tt = false; status.fb = false; status.dc = false;
+                [btnYT, btnTT, btnFB, btnDC].forEach(b => {
+                  if (b) { b.disabled = false; b.classList.remove("done"); }
+                });
+                if (btnYT) btnYT.innerHTML = "<span>Mở YouTube</span>";
+                if (btnTT) btnTT.innerHTML = "<span>Mở TikTok</span>";
+                if (btnFB) btnFB.innerHTML = "<span>Mở Fanpage</span>";
+                if (btnDC) btnDC.innerHTML = "<span>Vào Discord</span>";
+                [itemYT, itemTT, itemFB, itemDC].forEach(i => { if (i) i.classList.remove("done"); });
+                btnUnlock.disabled = true;
+                btnUnlock.classList.remove("ready");
+                btnUnlock.innerHTML = "<span>Chưa Hoàn Thành Các Bước Trên</span>";
+              } else {
+                gateOverlay.style.display = "none";
+              }
+            }).catch(() => {});
+          }
+
+          function checkAllDone() {
+            if (status.yt && status.tt && status.fb && status.dc) {
+              btnUnlock.disabled = false;
+              btnUnlock.classList.add("ready");
+              btnUnlock.innerHTML = "<span>🚀 MỞ KHÓA VÀO APP NGAY</span>";
+            }
+          }
+
+          function handleStep(btn, item, key, url) {
+            if (status[key]) return;
+            if (window.isleOverlay && window.isleOverlay.openUrl) {
+              window.isleOverlay.openUrl(url);
+            } else {
+              window.open(url, "_blank");
+            }
+
+            btn.disabled = true;
+            let seconds = 5;
+            btn.innerHTML = `<span>Đang mở (${seconds}s)</span>`;
+            const timer = setInterval(() => {
+              seconds--;
+              if (seconds > 0) {
+                btn.innerHTML = `<span>Đang mở (${seconds}s)</span>`;
+              } else {
+                clearInterval(timer);
+                status[key] = true;
+                btn.classList.add("done");
+                btn.innerHTML = "<span>Đã Xong ✅</span>";
+                item.classList.add("done");
+                checkAllDone();
+              }
+            }, 1000);
+          }
+
+          btnYT.addEventListener("click", () => handleStep(btnYT, itemYT, "yt", socialUrls.youtube));
+          btnTT.addEventListener("click", () => handleStep(btnTT, itemTT, "tt", socialUrls.tiktok));
+          btnFB.addEventListener("click", () => handleStep(btnFB, itemFB, "fb", socialUrls.facebook));
+          btnDC.addEventListener("click", () => handleStep(btnDC, itemDC, "dc", socialUrls.discord));
+
+          btnUnlock.addEventListener("click", () => {
+            if (!status.yt || !status.tt || !status.fb || !status.dc) return;
+            localStorage.setItem("banhmi_social_gate_unlocked_v1", "true");
+            localStorage.setItem("banhmi_gate_season", String(activeSeason));
+            gateOverlay.style.animation = "modalOut 0.25s ease forwards";
+            setTimeout(() => {
+              gateOverlay.style.display = "none";
+            }, 250);
+            showToast("🎉", "MỞ KHÓA THÀNH CÔNG", `Cảm ơn bạn đã đồng hành cùng Bánh Mì Mùa ${activeSeason}! Toàn bộ tính năng đã sẵn sàng để bạn trải nghiệm.`, 6000, "success");
+          });
+
+          // Admin / VIP Key Verification
+          const adminToggle = document.getElementById("gateAdminToggle");
+          const adminBox = document.getElementById("gateAdminBox");
+          const adminInput = document.getElementById("inputAdminKey");
+          const adminSubmit = document.getElementById("btnSubmitAdminKey");
+
+          if (adminToggle && adminBox) {
+            adminToggle.addEventListener("click", () => {
+              adminBox.style.display = adminBox.style.display === "flex" ? "none" : "flex";
+              if (adminBox.style.display === "flex" && adminInput) adminInput.focus();
+            });
+          }
+
+          function unlockAsAdmin() {
+            const entered = (adminInput?.value || "").trim().toUpperCase();
+            if (entered === masterKey || entered === "BANHMI-ADMIN-KEY1") {
+              localStorage.setItem("banhmi_social_gate_unlocked_v1", "true");
+              localStorage.setItem("banhmi_is_admin_v1", "true");
+              localStorage.setItem("banhmi_gate_season", "99999");
+              gateOverlay.style.animation = "modalOut 0.25s ease forwards";
+              setTimeout(() => {
+                gateOverlay.style.display = "none";
+              }, 250);
+              showToast("👑", "QUYỀN ADMIN / VIP", "Kích hoạt quyền Admin thành công! Bạn được miễn trừ toàn bộ nhiệm vụ vĩnh viễn trên máy này.", 7000, "success");
+            } else {
+              showToast("❌", "SAI MÃ ADMIN", "Key Admin/VIP không chính xác, vui lòng thử lại!", 4000, "error");
+            }
+          }
+
+          if (adminSubmit) {
+            adminSubmit.addEventListener("click", unlockAsAdmin);
+          }
+          if (adminInput) {
+            adminInput.addEventListener("keydown", (e) => {
+              if (e.key === "Enter") unlockAsAdmin();
+            });
+          }
+        })();
+
       })();
     </script>
   </body>

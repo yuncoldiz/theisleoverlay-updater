@@ -1,5 +1,5 @@
 #define AppName "TheIsleVn-BanhMi"
-#define AppVersion "1.0.5"
+#define AppVersion "1.0.6"
 #define AppPublisher "BanhMiBietChoi"
 #define AppExeName "TheIsleVn-BanhMi.exe"
 

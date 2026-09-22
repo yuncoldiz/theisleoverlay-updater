@@ -1,8 +1,8 @@
-version: 1.0.5
+version: 1.0.6
 files:
   - url: TheIsleVn-BanhMi-Setup.exe
-    sha512: wp/PyXKIDOjwEwuHGKaXmTYKSbrXqGaRvYfN8PqwsXPxNRyJndt8eNG7JQrrN+O3UcPHTGM4J1wwu5mShQPLFg==
-    size: 117997042
+    sha512: kf63IwOfnj4CvW3nU+pfuUKWd5phl2Tw+Uhl+dqzlI3mYjtBnryjQ1qhhMZn84LeKMXlh6X46iLcoQN/f3G1tw==
+    size: 117763881
 path: TheIsleVn-BanhMi-Setup.exe
-sha512: wp/PyXKIDOjwEwuHGKaXmTYKSbrXqGaRvYfN8PqwsXPxNRyJndt8eNG7JQrrN+O3UcPHTGM4J1wwu5mShQPLFg==
-releaseDate: '2026-09-18T16:32:45.725Z'
+sha512: kf63IwOfnj4CvW3nU+pfuUKWd5phl2Tw+Uhl+dqzlI3mYjtBnryjQ1qhhMZn84LeKMXlh6X46iLcoQN/f3G1tw==
+releaseDate: '2026-09-22T13:58:46.974Z'

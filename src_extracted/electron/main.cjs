@@ -67,6 +67,7 @@ const normalizeTheme = (t) => {
   const st = src.stat && typeof src.stat === "object" ? src.stat : {};
   return {
     accent: isHex(src.accent) ? src.accent : defaultTheme.accent,
+    statLayout: typeof src.statLayout === "string" ? src.statLayout : "row",
     stat: {
       health: isHex(st.health) ? st.health : defaultTheme.stat.health,
       stamina: isHex(st.stamina) ? st.stamina : defaultTheme.stat.stamina,
@@ -371,6 +372,7 @@ function radarSend(channel, data) {
 function setCursor(on) {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   cursorOn = on;
+  currentIgnoreMouse = true;
   mainWindow.setIgnoreMouseEvents(true, { forward: true });
   if (on) {
     if (!mainWindow.isVisible()) mainWindow.showInactive();
@@ -798,7 +800,8 @@ function trackGame() {
   prevWasShow = shouldShow;
 
   const hasFocus = activeIsGame || activeIsOverlay;
-  if (!hasFocus && cursorOn) {
+  if (!dashOn && !hasFocus && cursorOn) {
+    currentIgnoreMouse = true;
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
   } else if (hasFocus && cursorOn) {
     // Let the preload script manage mouseIgnore dynamically based on hover state.
@@ -1246,9 +1249,21 @@ function stopLocalTelemetryService() {
   }
 }
 
+function resolveRemoteUrl(url) {
+  if (typeof url !== "string") return url;
+  const cfg = (typeof cachedRemoteConfig !== "undefined" && cachedRemoteConfig) ? cachedRemoteConfig : (typeof getLocalRemoteConfig === "function" ? getLocalRemoteConfig() : null);
+  if (!cfg) return url;
+  if (url.includes("youtube.com") && cfg.youtube) return cfg.youtube;
+  if (url.includes("facebook.com") && cfg.facebook) return cfg.facebook;
+  if (url.includes("tiktok.com") && cfg.tiktok) return cfg.tiktok;
+  if ((url.includes("discord.gg") || url.includes("discord.com")) && cfg.discord) return cfg.discord;
+  return url;
+}
+
 ipcMain.handle("overlay:openUrl", (_e, url) => {
   if (typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
-    shell.openExternal(url).catch(() => {});
+    const finalUrl = resolveRemoteUrl(url);
+    shell.openExternal(finalUrl).catch(() => {});
     return true;
   }
   return false;
@@ -1333,7 +1348,8 @@ function reloadApp() {
 
 ipcMain.handle("app:openUrl", (_e, url) => {
   if (typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
-    shell.openExternal(url);
+    const finalUrl = resolveRemoteUrl(url);
+    shell.openExternal(finalUrl).catch(() => {});
   }
 });
 
@@ -1497,12 +1513,69 @@ ipcMain.handle("auth:logout", () => {
   });
   stopLive();
   try { closeRadar(); } catch {}
-  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send("auth:changed", { steamId: null });
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("auth:changed", { steamId: null });
+    mainWindow.reload();
+  }
 });
 
 ipcMain.handle("api:get", (_e, pathname) => apiFetch("GET", String(pathname)));
 ipcMain.handle("api:post", (_e, pathname, body) => apiFetch("POST", String(pathname), body ?? {}));
 ipcMain.handle("api:getfile", (_e, pathname) => apiGetFile(String(pathname)));
+
+let cachedRemoteConfig = null;
+function getLocalRemoteConfig() {
+  try {
+    const configPath = path.join(__dirname, "..", "resources", "remote_config.json");
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, "utf8"));
+    }
+  } catch {}
+  return {
+    gateSeason: 1,
+    adminKey: "BANHMI-ADMIN-KEY1",
+    youtube: "https://www.youtube.com/@ContentWithBanhMi",
+    facebook: "https://www.facebook.com/ContentWithBanhMi",
+    tiktok: "https://www.tiktok.com/@contentwithbanhmi",
+    discord: "https://discord.com/invite/P6jAfGrp4t",
+    announcement: "Chào mừng anh em đến với TheIsleVN - YTB BanhMi!",
+    bank: { bankName: "TPBank", accountNumber: "08609042003", accountName: "BÁNH MÌ BIẾT CHƠI" }
+  };
+}
+
+const DEFAULT_REMOTE_CONFIG_URL = "https://raw.githubusercontent.com/yuncoldiz/theisleoverlay-updater/main/remote_config.json";
+
+async function fetchRemoteConfig() {
+  if (cachedRemoteConfig) return cachedRemoteConfig;
+  const fallback = getLocalRemoteConfig();
+  const remoteUrl = (readSettings().remoteConfigUrl || DEFAULT_REMOTE_CONFIG_URL).trim();
+  if (!remoteUrl) {
+    cachedRemoteConfig = fallback;
+    return cachedRemoteConfig;
+  }
+  try {
+    const fetchUrl = remoteUrl.includes("?") ? `${remoteUrl}&_t=${Date.now()}` : `${remoteUrl}?_t=${Date.now()}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await net.fetch(fetchUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && typeof data === "object") {
+        cachedRemoteConfig = { ...fallback, ...data };
+        return cachedRemoteConfig;
+      }
+    }
+  } catch (err) {
+    logInfo(`Error fetching remote config: ${err ? err.message : err}`);
+  }
+  cachedRemoteConfig = fallback;
+  return cachedRemoteConfig;
+}
+
+ipcMain.handle("remoteConfig:get", async () => {
+  return await fetchRemoteConfig();
+});
 
 let mapCatalogCache = null;
 
@@ -1844,7 +1917,7 @@ function showServerSetup() {
           }
         }
         function openYoutube() {
-          shell.openExternal('https://www.youtube.com/@BanhMiBietChoi');
+          shell.openExternal('https://www.youtube.com/@ContentWithBanhMi');
         }
       </script>
     </body>
