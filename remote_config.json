@@ -2,13 +2,15 @@
   "gateSeason": 1,
   "adminKey": "BANHMI-ADMIN-KEY1",
   "youtube": "https://www.youtube.com/@BanhMiBietChoi",
-  "facebook": "https://www.facebook.com/ngocdocbanhmi",
+  "facebook": "https://www.facebook.com/ContentWithBanhMi",
   "tiktok": "https://www.tiktok.com/@contentwithbanhmi",
-  "discord": "https://discord.gg/banhmibietchoi",
+  "discord": "https://discord.gg/P6iAfGpr4t",
   "announcement": "Chào mừng anh em đến với TheIsleVN - YTB BanhMi!",
   "bank": {
     "bankName": "TPBank",
-    "accountNumber": "0888888888",
-    "accountName": "YTB BANHMI"
-  }
+    "accountNumber": "08609042003",
+    "accountName": "BÁNH MÌ BIẾT CHƠI",
+    "message": "Ủng hộ mình một cốc cafe: 08609042003 TP Bank"
+  },
+  "qrImageUrl": "https://img.vietqr.io/image/tpbank-08609042003-compact2.png?amount=0&addInfo=Ung%20ho%20Banh%20Mi"
 }
